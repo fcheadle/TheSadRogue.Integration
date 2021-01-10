@@ -18,7 +18,8 @@ namespace TheSadRogue.Integration.MapGenerationSteps
         protected override IEnumerator<object?> OnPerform(GenerationContext context)
         {
             Random random = new Random();
-            var map = context.GetFirstOrNew<ISettableGridView<bool>>(()=> new ArrayView<bool>(context.Width, context.Height));
+            var map = context.GetFirstOrNew<ISettableGridView<bool>>
+                (()=> new ArrayView<bool>(context.Width, context.Height), "backrooms");
             Rooms = new ItemList<Rectangle>();
             var largeRooms = new List<Rectangle>();
             

@@ -13,13 +13,13 @@ namespace TheSadRogue.Integration.MapGenerationSteps
         protected override IEnumerator<object?> OnPerform(GenerationContext context)
         {
             var map = context.GetFirstOrNew<ISettableGridView<bool>>
-                (()=> new ArrayView<bool>(context.Width, context.Height));
+                (()=> new ArrayView<bool>(context.Width, context.Height), "spiral");
 
             Point origin = (map.Width / 2, map.Height / 2);
 
 
             double increment = 0.001;
-            for (double i = 0; i < 125; i += increment)
+            for (double i = 0; i < map.Width * 3; i += increment)
             {
                 Point here = Spiral(origin, i);
                 if (map.Contains(here))

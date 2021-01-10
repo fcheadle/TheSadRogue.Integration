@@ -14,7 +14,7 @@ namespace TheSadRogue.Integration.MapGenerationSteps
         protected override IEnumerator<object?> OnPerform(GenerationContext context)
         {
             var map = context.GetFirstOrNew<ISettableGridView<bool>>
-                (() => new ArrayView<bool>(context.Width, context.Height));
+                (() => new ArrayView<bool>(context.Width, context.Height), "parallelograms");
 
             int width = 10;
             int height = 5;
@@ -27,6 +27,9 @@ namespace TheSadRogue.Integration.MapGenerationSteps
                     
                     foreach (var point in region.InnerPoints.Positions.Where(p=> map.Contains(p)))
                         map[point] = true;
+                    
+                    foreach (var point in region.OuterPoints.Positions.Where(p=> map.Contains(p)))
+                        map[point] = false;
                     
                     yield return null;
                 }

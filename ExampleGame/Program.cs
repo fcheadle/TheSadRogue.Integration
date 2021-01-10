@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using GoRogue.MapGeneration;
+using GoRogue.MapGeneration.Steps;
 using SadConsole;
 using SadRogue.Primitives;
 using SadRogue.Primitives.GridViews;
@@ -50,7 +51,8 @@ namespace ExampleGame
         private static RogueLikeMap GenerateMap()
         {
             var generator = new Generator(MapWidth, MapHeight)
-                .AddStep(new CompositeGenerationStep(MapWidth, MapHeight))
+                .AddStep(new CompositeGenerationStep())
+                //.AddStep(new ClosestMapAreaConnection("connections", "composite", "composite", "composite"))
                 .Generate();
             
             var generatedMap = generator.Context.GetFirst<ISettableGridView<bool>>();

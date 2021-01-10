@@ -13,73 +13,93 @@ namespace TheSadRogue.Integration.MapGenerationSteps
     /// </summary>
     public class CompositeGenerationStep : GenerationStep
     {
-        private readonly Random _random;
-        private readonly IEnumerable<Region> _regions;
-        private readonly int _width;
-        private readonly int _height;
-
-        private readonly List<GenerationStep[]> _stepSets;
-        public CompositeGenerationStep(int width, int height)
+        private readonly Dictionary<string, GenerationStep[]> _stepSets;
+        public CompositeGenerationStep()
         {
-            _width = width;
-            _height = height;
-            _stepSets = new List<GenerationStep[]>()
+            _stepSets = new Dictionary<string, GenerationStep[]>()
             {
-                DefaultAlgorithms.DungeonMazeMapSteps(null, 0, 0).ToArray(),
-                new GenerationStep[] { new BackroomGenerationStep() },
-                new GenerationStep[] { new ParallelogramGenerationStep() },
-                new GenerationStep[] { new SpiralGenerationStep() },
-
-                new GenerationStep[]
-                {
-                    new RandomViewFill(),
-                    new CellularAutomataAreaGeneration(),
-                    new CellularAutomataAreaGeneration(),
+                { "maze", new GenerationStep[] { new MazeGeneration("maze", wallFloorComponentTag:"maze", tunnelsComponentTag:"tunnel") } },
+                { "backrooms", new GenerationStep[] { new BackroomGenerationStep() } },
+                { "parallelograms", new GenerationStep[] { new ParallelogramGenerationStep() } },
+                { "spiral", new GenerationStep[] { new SpiralGenerationStep() } },
+                { 
+                    "cave", new GenerationStep[]
+                    {
+                        new RandomViewFill("cave", "cave"),
+                        new CellularAutomataAreaGeneration("cave", "cave"),
+                    }
                 },
+                //{ "connector", new GenerationStep[] { new ClosestMapAreaConnection("connector", "composite", "areas", "compositetunnel") } },
             };
-            _random = new Random();
-            _regions = GenerateRegions();
         }
         
         protected override IEnumerator<object?> OnPerform(GenerationContext context)
         {
+            Random random = new Random();
             var map = context.GetFirstOrNew<ISettableGridView<bool>>
-                (() => new ArrayView<bool>(context.Width, context.Height));
+                (() => new ArrayView<bool>(context.Width, context.Height), "composite");
+            
+            var generator = new Generator(map.Width, map.Height);
+            
+            foreach(var set in _stepSets)
+                generator.AddSteps(set.Value);
 
-            foreach (var region in _regions)
+            generator = generator.Generate();
+
+            var spiral = generator.Context.GetFirst<ISettableGridView<bool>>("spiral");
+            var backrooms = generator.Context.GetFirst<ISettableGridView<bool>>("backrooms");
+            var parallelograms = generator.Context.GetFirst<ISettableGridView<bool>>("parallelograms");
+            var caves = generator.Context.GetFirst<ISettableGridView<bool>>("cave");
+            var maze = generator.Context.GetFirst<ISettableGridView<bool>>("maze");
+            //var connections = generator.Context.GetFirst<ISettableGridView<bool>>(new ClosestMapAreaConnection().TunnelsComponentTag);
+            
+            foreach (var region in GenerateRegions(map.Width, map.Height, 45, 8))
             {
-                var generator = new Generator(region.Width, region.Height);
-                generator.AddSteps(SelectSteps());
-                generator = generator.Generate();
-                var subMap = generator.Context.GetFirst<ISettableGridView<bool>>();
-                
+                int chance = random.Next(0, 4);
                 foreach (var here in region.Points)
                 {
                     if (map.Contains(here))
                     {
-                        map[here] = subMap[here - (region.Left, region.Top)];
+                        switch (chance)
+                        {
+                            case 0:
+                                map[here] = spiral[here];
+                                break;
+                            case 1: 
+                                map[here] = backrooms[here];
+                                break;
+                            case 2: 
+                                map[here] = parallelograms[here];
+                                break;
+                            case 3: 
+                                map[here] = maze[here];
+                                break;
+                            case 4:
+                                map[here] = caves[here];
+                                break;
+                        }
                     }
                 }
 
                 yield return null;
             }
-            yield return null;
         }
-
-        private IEnumerable<GenerationStep> SelectSteps() => _stepSets[_random.Next(0, _stepSets.Count)];
-
+        
         /// <summary>
         /// Sections the map into regions of equal size
         /// </summary>
         /// <returns></returns>
-        private IEnumerable<Region> GenerateRegions()
+        private IEnumerable<Region> GenerateRegions(int mapWidth, int mapHeight, double rotationAngle, int minimumDimension)
         {
-            double rotationAngle = 45;//_random.Next(360);
-            int minimumDimension = 14;//_random.Next(25, 50);
-
-            var wholeMap = new Rectangle(-_width, -_height,_width * 2,_height * 2);
-            foreach (var room in wholeMap.BisectRecursive(minimumDimension))
-                yield return Region.FromRectangle("room", room).Rotate(rotationAngle);
+            var wholeMap = new Rectangle(-mapWidth, -mapHeight,mapWidth * 3,mapHeight * 3);
+            var center = (mapWidth / 2, mapHeight / 2);
+            var regions = wholeMap.BisectRecursive(minimumDimension);
+            foreach (var room in regions)
+            {
+                Region region = Region.FromRectangle("room", room).Rotate(rotationAngle, center);
+                if (region.Points.Any(p => p.X >= 0 && p.X < mapWidth && p.Y >= 0 && p.Y < mapHeight))
+                    yield return region;
+            }
         }
     }
 }
