@@ -1,6 +1,3 @@
-using System;
-using SadConsole;
-using SadConsole.Input;
 using SadRogue.Primitives;
 using TheSadRogue.Integration.Components;
 using Xunit;
@@ -14,11 +11,11 @@ namespace TheSadRogue.Integration.Tests.Components
         {
             var component = new TestComponent();
             var entity = new RogueLikeEntity((0,0), Color.White,1);
-            
+
             Assert.Empty(entity.SadComponents);
             Assert.Empty(entity.GoRogueComponents);
-            
-            entity.AddComponent(component);
+
+            entity.AllComponents.Add(component);
             Assert.Single(entity.SadComponents);
             Assert.Single(entity.GoRogueComponents);
         }
@@ -26,7 +23,7 @@ namespace TheSadRogue.Integration.Tests.Components
 
     public class TestComponent : RogueLikeComponentBase
     {
-        public TestComponent() : base(true, true, true, true, 5)
+        public TestComponent() : base(true, true, true, true)
         {
         }
     }
